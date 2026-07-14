@@ -6,10 +6,14 @@
  */
 window.Sound = (() => {
   const STORAGE_KEY = 'archive-sound-enabled';
+  const VOLUME_KEY = 'archive-sound-volume';
   let enabled = true;
+  let volume = 0.85;
   try {
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved !== null) enabled = saved === '1';
+    const savedVolume = parseFloat(localStorage.getItem(VOLUME_KEY));
+    if (!isNaN(savedVolume)) volume = Math.min(1, Math.max(0, savedVolume));
   } catch (e) {
     // localStorage unavailable (private browsing etc) — just default to on
   }
@@ -25,7 +29,7 @@ window.Sound = (() => {
     if (!ctx) {
       ctx = new AC();
       masterGain = ctx.createGain();
-      masterGain.gain.value = 0.85;
+      masterGain.gain.value = volume;
       masterGain.connect(ctx.destination);
     }
     if (ctx.state === 'suspended') ctx.resume().catch(() => {});
@@ -117,15 +121,41 @@ window.Sound = (() => {
     updateButton();
   }
 
+  function setVolume(value) {
+    volume = Math.min(1, Math.max(0, value));
+    if (masterGain) masterGain.gain.value = volume;
+    try { localStorage.setItem(VOLUME_KEY, String(volume)); } catch (e) {}
+    updateVolumeSlider();
+  }
+
+  function updateVolumeSlider() {
+    const slider = document.getElementById('sound-volume');
+    if (!slider) return;
+    const pct = Math.round(volume * 100);
+    if (Number(slider.value) !== pct) slider.value = String(pct);
+  }
+
   function initToggleButton() {
     const btn = document.getElementById('sound-toggle');
-    if (!btn) return;
-    updateButton();
-    btn.addEventListener('click', () => {
-      getCtx(); // unlock audio on this user gesture before flipping state
-      setEnabled(!enabled);
-      if (enabled) click();
-    });
+    const slider = document.getElementById('sound-volume');
+    if (btn) {
+      updateButton();
+      btn.addEventListener('click', () => {
+        getCtx(); // unlock audio on this user gesture before flipping state
+        setEnabled(!enabled);
+        if (enabled) click();
+      });
+    }
+    if (slider) {
+      slider.value = String(Math.round(volume * 100));
+      slider.addEventListener('input', () => {
+        getCtx(); // unlock audio on this user gesture too
+        setVolume(Number(slider.value) / 100);
+      });
+      slider.addEventListener('change', () => {
+        if (enabled) click();
+      });
+    }
   }
 
   if (document.readyState === 'loading') {
@@ -134,5 +164,5 @@ window.Sound = (() => {
     initToggleButton();
   }
 
-  return { click, slide, mail, isEnabled: () => enabled, setEnabled };
+  return { click, slide, mail, isEnabled: () => enabled, setEnabled, getVolume: () => volume, setVolume };
 })();

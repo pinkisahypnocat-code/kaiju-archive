@@ -1,7 +1,6 @@
 (() => {
   const treeEl = document.getElementById('tree');
   const readerEl = document.getElementById('reader');
-  const countEl = document.getElementById('doc-count');
   const indexNavEl = document.getElementById('index');
 
   const modeSwitchEl = document.getElementById('mode-switch');
@@ -40,13 +39,11 @@
       if (!res.ok) throw new Error('index not found');
       ROOT = await res.json();
       indexNodes(ROOT, null);
-      countEl.textContent = `${nodesByPath.size} file${nodesByPath.size === 1 ? '' : 's'} indexed`;
       renderTree();
       bindGlobalNav();
     } catch (err) {
       treeEl.innerHTML = `<div class="tree-error">Could not load data/index.json.<br>Run the build script or push to trigger the GitHub Action.</div>`;
       readerEl.innerHTML = `<div class="doc-empty">No index yet. See the sidebar for details.</div>`;
-      countEl.textContent = 'index missing';
       console.error(err);
     }
 
@@ -146,6 +143,12 @@
     }
     indexNavEl.hidden = next !== 'docs';
     mailSidebarEl.hidden = next !== 'mail';
+    // Belt-and-braces: set the inline style directly too. [hidden] should be
+    // enough on its own, but an inline style can't be shadowed by any stylesheet
+    // rule, ordering, or stale cached CSS — so the two panels can never both be
+    // visible at once no matter what.
+    indexNavEl.style.display = next === 'docs' ? '' : 'none';
+    mailSidebarEl.style.display = next === 'mail' ? '' : 'none';
     if (next !== 'mail') closeSwitcher();
     if (!opts.skipNav) {
       if (next === 'mail' && MAIL_ACCOUNTS.length) {
