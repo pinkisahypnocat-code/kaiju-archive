@@ -400,27 +400,14 @@ def read_mail_cfg(cfg_path):
     return date, unread
 
 
-def build_mail_account(dir_path, rel_path):
-    """Builds one mailbox for a folder containing account.cfg. Sibling _mail/
-    folder (same directory) holds one .txt per email, rendered through the same
-    header/body pipeline as documents."""
-    cfg_path = os.path.join(dir_path, ACCOUNT_CFG)
-    name, email = read_account_cfg(cfg_path)
-    account_id = rel_path or os.path.basename(dir_path)
-
-    account = {
-        "id": account_id,
-        "name": name or make_title(os.path.basename(dir_path)),
-        "email": email or "",
-        "avatar": find_cover_image(dir_path, rel_path),
-        "messages": [],
-    }
-
-    mail_dir = os.path.join(dir_path, MAIL_DIR)
+def read_mail_folder(mail_dir, mail_rel):
+    """Reads every .txt in a _mail/ folder through the same header/body pipeline
+    as documents, pairing each with an optional same-stem .cfg for date/unread.
+    Returns a list of message dicts, sorted by filename."""
+    messages = []
     if not os.path.isdir(mail_dir):
-        return account
+        return messages
 
-    mail_rel = f"{rel_path}/{MAIL_DIR}" if rel_path else MAIL_DIR
     try:
         entries = sorted(os.listdir(mail_dir))
     except FileNotFoundError:
@@ -441,7 +428,7 @@ def build_mail_account(dir_path, rel_path):
         cfg_stem_path = os.path.join(mail_dir, f"{stem}.cfg")
         date, unread = read_mail_cfg(cfg_stem_path)
 
-        account["messages"].append({
+        messages.append({
             "id": stem,
             "subject": subject,
             "preview": tagline,
@@ -451,19 +438,51 @@ def build_mail_account(dir_path, rel_path):
             "html": html,
         })
 
-    return account
+    return messages
+
+
+def build_mail_account(dir_path, rel_path, global_messages):
+    """Builds one mailbox for a folder containing account.cfg. Its inbox is the
+    global content/_mail/ messages (shared by every account, so they don't need
+    to be copy-pasted into each mailbox) plus any messages in its own sibling
+    _mail/ folder, merged and sorted together by filename."""
+    cfg_path = os.path.join(dir_path, ACCOUNT_CFG)
+    name, email = read_account_cfg(cfg_path)
+    account_id = rel_path or os.path.basename(dir_path)
+
+    mail_dir = os.path.join(dir_path, MAIL_DIR)
+    mail_rel = f"{rel_path}/{MAIL_DIR}" if rel_path else MAIL_DIR
+    local_messages = read_mail_folder(mail_dir, mail_rel)
+
+    merged = sorted(global_messages + local_messages, key=lambda m: m["id"])
+
+    return {
+        "id": account_id,
+        "name": name or make_title(os.path.basename(dir_path)),
+        "email": email or "",
+        "avatar": find_cover_image(dir_path, rel_path),
+        "messages": merged,
+    }
 
 
 def scan_mail_accounts(root):
     """Walks the whole content tree looking for account.cfg files — a folder can
-    hold a normal content.txt document AND be a mailbox at the same time."""
+    hold a normal content.txt document AND be a mailbox at the same time. A
+    _mail/ folder directly under content/ (not tied to any single account) is
+    global: its messages are merged into every mailbox found."""
+    global_mail_dir = os.path.join(root, MAIL_DIR)
+    global_messages = read_mail_folder(global_mail_dir, MAIL_DIR)
+
     accounts = []
     for dirpath, dirnames, filenames in os.walk(root):
         dirnames[:] = [d for d in sorted(dirnames) if not d.startswith(".")]
+        if dirpath == root:
+            # don't descend into content/_mail/ as if it were a regular folder
+            dirnames[:] = [d for d in dirnames if d != MAIL_DIR]
         if ACCOUNT_CFG in filenames:
             rel_path = os.path.relpath(dirpath, root)
             rel_path = "" if rel_path == "." else rel_path.replace(os.sep, "/")
-            accounts.append(build_mail_account(dirpath, rel_path))
+            accounts.append(build_mail_account(dirpath, rel_path, global_messages))
     return accounts
 
 

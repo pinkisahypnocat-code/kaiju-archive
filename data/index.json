@@ -117,16 +117,6 @@
               "tagline": "Местоимения: Она/Её",
               "image": "content/workers/scientists/Pink/cover.jpg",
               "children": []
-            },
-            {
-              "name": "test",
-              "title": "Test",
-              "path": "workers/scientists/test",
-              "hasContent": true,
-              "html": "<p><em>(пусто)</em></p>",
-              "tagline": null,
-              "image": null,
-              "children": []
             }
           ]
         }

@@ -178,6 +178,48 @@ body {
   box-shadow: 0 0 6px var(--glow-cyan);
 }
 
+.sound-control {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sound-volume {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 64px;
+  height: 3px;
+  background: var(--panel-line);
+  border-radius: 2px;
+  outline: none;
+  cursor: pointer;
+}
+.sound-volume::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: var(--glow-cyan);
+  box-shadow: 0 0 6px var(--glow-cyan);
+  cursor: pointer;
+  margin-top: 0;
+}
+.sound-volume::-moz-range-thumb {
+  width: 11px;
+  height: 11px;
+  border: none;
+  border-radius: 50%;
+  background: var(--glow-cyan);
+  box-shadow: 0 0 6px var(--glow-cyan);
+  cursor: pointer;
+}
+.sound-volume::-moz-range-track {
+  height: 3px;
+  background: var(--panel-line);
+  border-radius: 2px;
+}
+
 .status-dot {
   width: 7px;
   height: 7px;

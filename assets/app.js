@@ -433,10 +433,6 @@
   }
 
   function renderAccountSwitcher(activeAccountId) {
-    if (MAIL_ACCOUNTS.length < 2) {
-      mailSwitcherEl.innerHTML = '';
-      return;
-    }
     mailSwitcherEl.innerHTML = MAIL_ACCOUNTS.map((acc) => {
       const avatarHtml = acc.avatar
         ? `<img class="mail-avatar" src="${escapeAttr(acc.avatar)}" alt="">`
@@ -457,7 +453,6 @@
   }
 
   function openSwitcher() {
-    if (MAIL_ACCOUNTS.length < 2) return;
     switcherOpen = true;
     mailSwitcherEl.hidden = false;
     mailHamburgerEl.setAttribute('aria-expanded', 'true');
