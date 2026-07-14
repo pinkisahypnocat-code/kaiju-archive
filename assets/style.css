@@ -230,6 +230,7 @@ body {
    (toggled via the [hidden] attribute) at any time. */
 .index, .mail-sidebar { grid-area: sidebar; }
 .reader { grid-area: reader; }
+.index[hidden], .mail-sidebar[hidden] { display: none; }
 
 /* ---------- Index / sidebar tree ---------- */
 

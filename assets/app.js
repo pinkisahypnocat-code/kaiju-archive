@@ -356,6 +356,48 @@
     });
   }
 
+  function parseRuDate(str) {
+    if (!str) return null;
+    const m = /^(\d{1,2})\.(\d{1,2})\.(\d{4})$/.exec(str.trim());
+    if (!m) return null;
+    const day = parseInt(m[1], 10);
+    const month = parseInt(m[2], 10) - 1;
+    const year = parseInt(m[3], 10);
+    const d = new Date(year, month, day); // local time, 0:00 — no time-of-day is stored
+    if (d.getFullYear() !== year || d.getMonth() !== month || d.getDate() !== day) return null;
+    return d;
+  }
+
+  function pluralizeRu(n, forms) {
+    const abs = Math.abs(n) % 100;
+    const last = abs % 10;
+    if (abs > 10 && abs < 20) return forms[2];
+    if (last > 1 && last < 5) return forms[1];
+    if (last === 1) return forms[0];
+    return forms[2];
+  }
+
+  // Renders a "date" field dynamically as relative time from *now*, recomputed
+  // on every render (not baked in at build time) so it keeps counting up the
+  // longer the page stays live. Accepts "ДД.ММ.ГГГГ"; anything else that
+  // doesn't parse is shown as-is, for backward compatibility with free text.
+  function formatMailDate(raw) {
+    if (!raw) return '';
+    const date = parseRuDate(raw);
+    if (!date) return raw;
+
+    const today = new Date();
+    const todayMid = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    const diffDays = Math.round((todayMid - date) / 86400000);
+
+    if (diffDays === 0) return 'сегодня';
+    if (diffDays === 1) return 'вчера';
+    if (diffDays > 1) return `${diffDays} ${pluralizeRu(diffDays, ['день', 'дня', 'дней'])} назад`;
+    if (diffDays === -1) return 'завтра';
+    const abs = Math.abs(diffDays);
+    return `через ${abs} ${pluralizeRu(abs, ['день', 'дня', 'дней'])}`;
+  }
+
   // ---------- mail sidebar (topbar, account switcher, Gmail-style list) ----------
 
   function initials(name) {
@@ -456,7 +498,7 @@
         <div class="mail-item${unread ? ' unread' : ''}${active ? ' active' : ''}" data-msg="${escapeAttr(m.id)}">
           <div class="mail-item-row">
             <span class="mail-item-subject"><span class="mail-item-dot"></span>${escapeHtml(m.subject)}</span>
-            ${m.date ? `<span class="mail-item-date">${escapeHtml(m.date)}</span>` : ''}
+            ${m.date ? `<span class="mail-item-date">${escapeHtml(formatMailDate(m.date))}</span>` : ''}
           </div>
           ${m.preview ? `<div class="mail-item-preview">${escapeHtml(m.preview)}</div>` : ''}
         </div>`;
@@ -471,7 +513,8 @@
   }
 
   function renderMailReader(account, messageId) {
-    if (window.Sound) Sound.slide();
+    // Deliberately no Sound.slide() here — browsing mail (switching accounts,
+    // opening the inbox) stays silent; only actually opening a message chimes.
     currentPath = null; // mail isn't part of the docs prev/next chain
 
     if (!messageId) {
@@ -489,6 +532,7 @@
 
     readMessages.add(`${account.id}::${message.id}`);
     renderMessageList(account); // refresh unread dot + active highlight in the list
+    if (window.Sound) Sound.mail();
 
     const avatarHtml = account.avatar
       ? `<img class="mail-avatar" src="${escapeAttr(account.avatar)}" alt="">`
@@ -505,7 +549,7 @@
             <div class="mail-from-name">${escapeHtml(account.name)}</div>
             <div class="mail-from-email">${escapeHtml(account.email || '')}</div>
           </div>
-          ${message.date ? `<div class="mail-from-date">${escapeHtml(message.date)}</div>` : ''}
+          ${message.date ? `<div class="mail-from-date">${escapeHtml(formatMailDate(message.date))}</div>` : ''}
         </div>
         <div class="doc-divider"></div>
         <div class="doc-body">${message.html}</div>

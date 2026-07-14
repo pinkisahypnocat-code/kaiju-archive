@@ -48,9 +48,10 @@ window.Sound = (() => {
     return loading[name];
   }
 
-  // preload both effects immediately so the first click/slide isn't silent
+  // preload all effects immediately so the first click/slide/mail isn't silent
   loadBuffer('click', 'assets/sfx/click.ogg');
   loadBuffer('slide', 'assets/sfx/slide.ogg');
+  loadBuffer('mail', 'assets/sfx/mail.ogg');
 
   function playBuffer(name, { pan = null, panFrom = null, gainValue = 1 } = {}) {
     if (!enabled) return;
@@ -97,6 +98,11 @@ window.Sound = (() => {
     playBuffer('slide', { panFrom: 0.55, gainValue: 0.8 });
   }
 
+  // A gentle two-note chime — used only when an email is actually opened.
+  function mail() {
+    playBuffer('mail', { gainValue: 0.75 });
+  }
+
   function updateButton() {
     const btn = document.getElementById('sound-toggle');
     if (!btn) return;
@@ -128,5 +134,5 @@ window.Sound = (() => {
     initToggleButton();
   }
 
-  return { click, slide, isEnabled: () => enabled, setEnabled };
+  return { click, slide, mail, isEnabled: () => enabled, setEnabled };
 })();

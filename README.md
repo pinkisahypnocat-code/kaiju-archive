@@ -265,15 +265,21 @@ whether it has a `content.txt` document page or not.
    in the inbox, so prefix them with numbers to control order.
 
 3. Optionally add a `.cfg` file with the same name as the `.txt` (e.g.
-   `02_reminder.cfg`) to set a display date and whether it starts unread:
+   `02_reminder.cfg`) to set a date and whether it starts unread:
 
    ```ini
    [MAIL]
-   date = сегодня
+   date = 14.07.2026
    unread = true
    ```
 
-   Leave the `.cfg` out entirely to just get no date shown and a read message.
+   `date` is written **Russian-style, `ДД.ММ.ГГГГ`, with no time** — the site
+   works out how long ago that was itself, live, every time the page loads
+   (`сегодня`, `вчера`, `3 дня назад`, ...), counted from local midnight. It's
+   not baked into `data/mail.json` as fixed text, so it keeps counting up the
+   longer the archive sits untouched — no need to edit it again later. Leave
+   the `.cfg` out entirely to get no date shown and a message that starts
+   already read.
 
 4. Commit and push — the build script picks up every `account.cfg` it finds
    and writes `data/mail.json` alongside `data/index.json`.
