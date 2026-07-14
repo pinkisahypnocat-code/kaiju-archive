@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Case Archive — Kaiju Paradise</title>
+<link rel="icon" href="data:,">
+<meta name="theme-color" content="#060d18">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Special+Elite&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+
+<div class="frame">
+
+  <header class="masthead">
+    <div class="masthead-left">
+      <div class="sonar-ping" aria-hidden="true">
+        <span class="ping-dot"></span>
+        <span class="ping-ring"></span>
+        <span class="ping-ring ping-ring-delay"></span>
+      </div>
+      <div class="masthead-text">
+        <h1>Case Archive</h1>
+        <p class="masthead-sub">Kaiju Paradise — Shared Continuity Record</p>
+      </div>
+    </div>
+    <div class="masthead-right">
+      <div class="mode-switch" id="mode-switch" role="tablist" aria-label="View mode">
+        <button class="mode-btn active" type="button" data-mode="docs" role="tab" aria-selected="true">Documents</button>
+        <button class="mode-btn" type="button" data-mode="mail" role="tab" aria-selected="false">Mail</button>
+      </div>
+      <button id="sound-toggle" class="sound-toggle" type="button" aria-pressed="true" title="Toggle interface sounds">
+        <span class="sound-toggle-dot"></span>
+        <span class="sound-toggle-label">SFX ON</span>
+      </button>
+      <span class="status-dot"></span>
+      <span id="doc-count">— files indexed</span>
+    </div>
+  </header>
+
+  <div class="body-grid">
+
+    <nav class="index" id="index" aria-label="Category index">
+      <div class="index-label">Index</div>
+      <div id="tree" class="tree">
+        <div class="tree-loading">Loading index…</div>
+      </div>
+    </nav>
+
+    <nav class="mail-sidebar" id="mail-sidebar" aria-label="Mailbox" hidden>
+      <div class="mail-topbar">
+        <button class="mail-hamburger" id="mail-hamburger" type="button" aria-label="Switch account" aria-expanded="false">
+          <span></span><span></span><span></span>
+        </button>
+        <div class="mail-account-info" id="mail-account-info">
+          <img class="mail-avatar" id="mail-avatar" src="" alt="" hidden>
+          <div class="mail-avatar mail-avatar-fallback" id="mail-avatar-fallback"></div>
+          <div class="mail-account-text">
+            <div class="mail-account-name" id="mail-account-name">—</div>
+            <div class="mail-account-email" id="mail-account-email"></div>
+          </div>
+        </div>
+      </div>
+      <div class="mail-account-switcher" id="mail-account-switcher" hidden></div>
+      <div class="mail-list" id="mail-list">
+        <div class="tree-loading">Loading mailbox…</div>
+      </div>
+    </nav>
+
+    <main class="reader" id="reader">
+      <!-- populated by app.js -->
+    </main>
+
+  </div>
+  
+</div>
+
+<script src="assets/sound.js"></script>
+<script src="assets/app.js"></script>
+</body>
+</html>
