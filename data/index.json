@@ -131,13 +131,14 @@
               "children": []
             },
             {
-              "name": "test",
-              "title": "Test",
-              "path": "workers/scientists/test",
+              "name": "TestSubject",
+              "title": "Тестовый Субъект",
+              "path": "workers/scientists/TestSubject",
               "hasContent": true,
-              "html": "<p><em>(пусто)</em></p>",
-              "tagline": null,
+              "html": "<p>Это тестовая карточка сотрудника. Видна только при включённом debug.cfg, используйте для проверки вёрстки перед публикацией настоящего профиля.</p>",
+              "tagline": "Черновой профиль — только для отладки",
               "image": null,
+              "debug": true,
               "children": []
             }
           ]
