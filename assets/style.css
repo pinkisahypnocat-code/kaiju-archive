@@ -228,6 +228,31 @@ body {
   box-shadow: 0 0 7px var(--glow-cyan);
 }
 
+/* ---------- Debug badge (only ever rendered when debug.cfg is on) ---------- */
+
+.debug-badge {
+  display: inline-flex;
+  align-items: center;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: #ff9d5c;
+  background: rgba(255, 157, 92, 0.12);
+  border: 1px solid rgba(255, 157, 92, 0.4);
+  border-radius: 3px;
+  padding: 1px 5px;
+  margin-left: 6px;
+  vertical-align: middle;
+  flex-shrink: 0;
+}
+.debug-badge-floating {
+  position: absolute;
+  top: 18px;
+  left: 30px;
+  margin-left: 0;
+}
+
 /* ---------- Docs / Mail mode switch ---------- */
 
 .mode-switch {

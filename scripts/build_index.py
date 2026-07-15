@@ -25,6 +25,8 @@ OUTPUT_MAIL = "data/mail.json"
 IMAGE_EXTS = {".png", ".jpg", ".jpeg", ".webp", ".gif"}
 ACCOUNT_CFG = "account.cfg"
 MAIL_DIR = "_mail"
+DEBUG_CFG = "debug.cfg"      # repo root — flips global debug mode, edited in VS Code only
+FOLDER_CFG = "folder.cfg"    # inside any content/ folder — marks that folder debug-only
 
 
 # ============================================================================
@@ -314,6 +316,54 @@ def render_body_html(body, dir_path, rel_path):
 # Tree walk
 # ============================================================================
 
+def read_global_debug_flag():
+    """Reads repo-root debug.cfg ([DEBUG] enabled = true/false). This file is
+    never part of content/, is never rendered anywhere on the site, and is
+    meant to be flipped locally in VS Code (or excluded from a public deploy)
+    — not something end users of the site can toggle. Defaults to False
+    (debug content stays hidden) if the file is missing or unreadable."""
+    if not os.path.isfile(DEBUG_CFG):
+        return False
+    parser = configparser.ConfigParser()
+    try:
+        parser.read(DEBUG_CFG, encoding="utf-8")
+        section = None
+        if parser.has_section("DEBUG"):
+            section = parser["DEBUG"]
+        elif parser.sections():
+            section = parser[parser.sections()[0]]
+        if section is not None:
+            return section.getboolean("enabled", fallback=False)
+    except (configparser.Error, ValueError) as e:
+        print(f"WARNING: could not read {DEBUG_CFG}: {e}")
+    return False
+
+
+def is_folder_debug(dir_path):
+    """Reads folder.cfg ([FOLDER] IsDebug = true) inside a content/ folder to
+    mark that whole folder (document, mail account, everything under it) as
+    debug-only content."""
+    cfg_path = os.path.join(dir_path, FOLDER_CFG)
+    if not os.path.isfile(cfg_path):
+        return False
+    parser = configparser.ConfigParser()
+    try:
+        parser.read(cfg_path, encoding="utf-8")
+        section = None
+        if parser.has_section("FOLDER"):
+            section = parser["FOLDER"]
+        elif parser.sections():
+            section = parser[parser.sections()[0]]
+        if section is not None:
+            return section.getboolean("IsDebug", fallback=False)
+    except (configparser.Error, ValueError) as e:
+        print(f"WARNING: could not read {cfg_path}: {e}")
+    return False
+
+
+DEBUG_ENABLED = read_global_debug_flag()
+
+
 def build_tree(dir_path, rel_path=""):
     name = os.path.basename(dir_path) if rel_path else "Home"
     node = {
@@ -324,6 +374,7 @@ def build_tree(dir_path, rel_path=""):
         "html": None,
         "tagline": None,
         "image": None,
+        "debug": is_folder_debug(dir_path) if rel_path else False,
         "children": [],
     }
 
@@ -352,6 +403,10 @@ def build_tree(dir_path, rel_path=""):
     for entry in entries:
         full = os.path.join(dir_path, entry)
         if os.path.isdir(full) and not entry.startswith("."):
+            if entry == MAIL_DIR:
+                continue  # _mail/ is handled separately by the mail scanner, not as a doc folder
+            if is_folder_debug(full) and not DEBUG_ENABLED:
+                continue  # debug-only folder.cfg, global debug is off — hide it entirely
             child_rel = f"{rel_path}/{entry}" if rel_path else entry
             child_node = build_tree(full, child_rel)
             if child_node["hasContent"] or child_node["children"]:
@@ -381,8 +436,8 @@ def read_account_cfg(cfg_path):
 
 def read_mail_cfg(cfg_path):
     """Reads an optional per-message .cfg (same stem as the .txt) for a [MAIL]
-    section: date=, unread=true/false. Everything is optional."""
-    date, unread = None, False
+    section: date=, unread=true/false, IsDebug=true/false. Everything is optional."""
+    date, unread, is_debug = None, False, False
     if os.path.isfile(cfg_path):
         parser = configparser.ConfigParser()
         try:
@@ -395,9 +450,10 @@ def read_mail_cfg(cfg_path):
             if section is not None:
                 date = (section.get("date", fallback="") or "").strip() or None
                 unread = section.getboolean("unread", fallback=False)
+                is_debug = section.getboolean("IsDebug", fallback=False)
         except (configparser.Error, ValueError) as e:
             print(f"WARNING: could not read {cfg_path}: {e}")
-    return date, unread
+    return date, unread, is_debug
 
 
 def read_mail_folder(mail_dir, mail_rel):
@@ -426,7 +482,10 @@ def read_mail_folder(mail_dir, mail_rel):
         html = render_body_html(body, mail_dir, mail_rel)
 
         cfg_stem_path = os.path.join(mail_dir, f"{stem}.cfg")
-        date, unread = read_mail_cfg(cfg_stem_path)
+        date, unread, is_debug = read_mail_cfg(cfg_stem_path)
+
+        if is_debug and not DEBUG_ENABLED:
+            continue  # debug-only message, global debug is off — hide it entirely
 
         messages.append({
             "id": stem,
@@ -434,6 +493,7 @@ def read_mail_folder(mail_dir, mail_rel):
             "preview": tagline,
             "date": date,
             "unread": unread,
+            "debug": is_debug,
             "image": image,
             "html": html,
         })
@@ -441,52 +501,72 @@ def read_mail_folder(mail_dir, mail_rel):
     return messages
 
 
-def build_mail_account(dir_path, rel_path, global_messages):
-    """Builds one mailbox for a folder containing account.cfg. Its inbox is the
-    global content/_mail/ messages (shared by every account, so they don't need
-    to be copy-pasted into each mailbox) plus any messages in its own sibling
-    _mail/ folder, merged and sorted together by filename."""
+def build_mail_account(dir_path, rel_path, messages, is_debug):
+    """Builds one mailbox for a folder containing account.cfg. `messages` is
+    already the fully merged set (this account's own _mail/ plus every
+    ancestor _mail/ folder from content/ on down, i.e. global + category-level
+    + its own), handed in by the recursive scan below."""
     cfg_path = os.path.join(dir_path, ACCOUNT_CFG)
     name, email = read_account_cfg(cfg_path)
     account_id = rel_path or os.path.basename(dir_path)
-
-    mail_dir = os.path.join(dir_path, MAIL_DIR)
-    mail_rel = f"{rel_path}/{MAIL_DIR}" if rel_path else MAIL_DIR
-    local_messages = read_mail_folder(mail_dir, mail_rel)
-
-    merged = sorted(global_messages + local_messages, key=lambda m: m["id"])
 
     return {
         "id": account_id,
         "name": name or make_title(os.path.basename(dir_path)),
         "email": email or "",
         "avatar": find_cover_image(dir_path, rel_path),
-        "messages": merged,
+        "debug": is_debug,
+        "messages": sorted(messages, key=lambda m: m["id"]),
     }
 
 
 def scan_mail_accounts(root):
     """Walks the whole content tree looking for account.cfg files — a folder can
-    hold a normal content.txt document AND be a mailbox at the same time. A
-    _mail/ folder directly under content/ (not tied to any single account) is
-    global: its messages are merged into every mailbox found."""
-    global_mail_dir = os.path.join(root, MAIL_DIR)
-    global_messages = read_mail_folder(global_mail_dir, MAIL_DIR)
+    hold a normal content.txt document AND be a mailbox at the same time.
 
+    A _mail/ folder is scoped to wherever it sits: one directly under content/
+    is truly global (merged into every mailbox); one inside e.g.
+    content/workers/scientists/ is merged into every mailbox *under that
+    folder* only (every scientist, but nobody else); one inside an account's
+    own folder is private to that one account. This falls out naturally by
+    accumulating messages as we recurse: each level adds its own _mail/ on
+    top of what its parent already collected.
+
+    folder.cfg's IsDebug also cascades: hiding a category hides every mailbox
+    (and every ancestor _mail/'s reach) underneath it too.
+    """
     accounts = []
-    for dirpath, dirnames, filenames in os.walk(root):
-        dirnames[:] = [d for d in sorted(dirnames) if not d.startswith(".")]
-        if dirpath == root:
-            # don't descend into content/_mail/ as if it were a regular folder
-            dirnames[:] = [d for d in dirnames if d != MAIL_DIR]
-        if ACCOUNT_CFG in filenames:
-            rel_path = os.path.relpath(dirpath, root)
-            rel_path = "" if rel_path == "." else rel_path.replace(os.sep, "/")
-            accounts.append(build_mail_account(dirpath, rel_path, global_messages))
+
+    def walk(dir_path, rel_path, inherited_messages):
+        try:
+            entries = sorted(os.listdir(dir_path))
+        except FileNotFoundError:
+            entries = []
+
+        own_mail_rel = f"{rel_path}/{MAIL_DIR}" if rel_path else MAIL_DIR
+        own_messages = read_mail_folder(os.path.join(dir_path, MAIL_DIR), own_mail_rel)
+        combined = inherited_messages + own_messages
+
+        folder_debug = is_folder_debug(dir_path)
+        if ACCOUNT_CFG in entries and not (folder_debug and not DEBUG_ENABLED):
+            accounts.append(build_mail_account(dir_path, rel_path, combined, folder_debug))
+
+        for entry in entries:
+            full = os.path.join(dir_path, entry)
+            if not os.path.isdir(full) or entry == MAIL_DIR or entry.startswith("."):
+                continue
+            if is_folder_debug(full) and not DEBUG_ENABLED:
+                continue  # debug-only folder.cfg, global debug is off — hide this branch entirely
+            child_rel = f"{rel_path}/{entry}" if rel_path else entry
+            walk(full, child_rel, combined)
+
+    walk(root, "", [])
     return accounts
 
 
 def main():
+    print(f"Debug mode: {'ON' if DEBUG_ENABLED else 'off'} (repo-root {DEBUG_CFG})")
+
     if not os.path.isdir(ROOT):
         os.makedirs(ROOT, exist_ok=True)
         print(f"Created empty '{ROOT}/' directory — add folders with content.txt files.")

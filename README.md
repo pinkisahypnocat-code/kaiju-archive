@@ -218,10 +218,61 @@ content/
 A folder doesn't need its own `content.txt` to act as a category — if it only holds
 sub-folders, it just becomes a plain listing page in the sidebar.
 
+## Debug-only content
+
+Sometimes you want a draft worker, subject, or email visible while you're
+building it, but never shown on the actual published site. This is a
+**local, VS Code-only switch — there is no toggle anywhere in the browser.**
+
+1. Repo root `debug.cfg` — flips everything on/off:
+
+   ```ini
+   [DEBUG]
+   enabled = false
+   ```
+
+   Leave it `false` (or delete the file) for anything you build/push publicly.
+   Set it to `true` locally when you want to preview debug content, then run
+   `python3 scripts/build_index.py` again. Only content marked debug (below)
+   is affected — everything else always shows.
+
+2. Mark a whole folder (a document, a worker, a category, everything under
+   it) as debug-only by adding `folder.cfg` inside it:
+
+   ```ini
+   [FOLDER]
+   IsDebug = true
+   ```
+
+   This cascades: flagging a category folder hides every document, worker,
+   and mailbox underneath it too, not just that one folder.
+
+3. Mark a single email as debug-only in its per-message `.cfg`:
+
+   ```ini
+   [MAIL]
+   IsDebug = true
+   ```
+
+When `debug.cfg` is off, none of this ever reaches `data/index.json` or
+`data/mail.json` — it's stripped out at build time, not just hidden with CSS.
+When it's on, debug items show up tagged with a small orange **DEBUG** badge
+so you can tell them apart from real content while you're testing.
+
 ## Mail / in-character mailboxes
 
 Any folder anywhere under `content/` can also become a mailbox — separate from
 whether it has a `content.txt` document page or not.
+
+A `_mail/` folder is scoped to wherever it sits, and cascades down:
+- `content/_mail/` — merged into **every** mailbox on the site.
+- `content/workers/scientists/_mail/` — merged into every mailbox *under*
+  `scientists/` only (every scientist's account), nobody outside it.
+- An account's own `_mail/` (next to its `account.cfg`) is private to that
+  one account.
+
+So put a broadcast in the level that should see it, instead of copy-pasting
+the same email into every account.
 
 1. Add an `account.cfg` file to the folder:
 
@@ -290,17 +341,37 @@ the sidebar between the category tree and a Gmail-style inbox. The hamburger
 Read/unread state lives only in the browser tab (nothing is written back), so
 it resets on reload — this is meant as in-character flavor, not persistence.
 
-## Running the index build locally (optional)
+## Previewing locally
 
-If you want to preview `data/index.json` after editing files, without waiting for
-GitHub Actions:
+Run one command — it rebuilds `data/index.json` + `data/mail.json` from
+`content/` first, then starts a local server and opens the site:
+
+```bash
+scripts/serve.sh
+```
+
+(`PORT=8123 scripts/serve.sh` to use a different port.) Every time you re-run
+it, it rebuilds first, so you're always looking at fresh output, never a
+stale cached JSON from before your last edit.
+
+If you'd rather just rebuild without serving:
 
 ```bash
 python3 scripts/build_index.py
 ```
 
-Then open `index.html` in a browser (or run any local static server, e.g.
-`python3 -m http.server`) to preview.
+## How the live site stays up to date
+
+GitHub Pages only serves static files — it can't run Python on its own. So
+`.github/workflows/build-index.yml` does the "run the build script, then show
+the generated site" step for you on GitHub's side: every push to `main` that
+touches `content/**`, `scripts/build_index.py`, or `debug.cfg` runs
+`build_index.py`, commits the regenerated `data/index.json` /
+`data/mail.json` if they changed, and that commit is what GitHub Pages
+deploys. So the flow for any change is: edit → push → Action builds →
+Pages serves the built result — typically live within a minute or two of the
+push, not instantly on each page load (that part isn't possible for a static
+site).
 
 ## Project structure
 
@@ -311,7 +382,9 @@ content/                  your lore lives here
   characters/
   locations/
 data/index.json           auto-generated — do not edit by hand
-scripts/build_index.py    the script that generates data/index.json
+data/mail.json             auto-generated — do not edit by hand
+scripts/build_index.py    the script that generates data/index.json and data/mail.json
+scripts/serve.sh          local dev: rebuilds, then serves + opens the site
 .github/workflows/        the GitHub Action that runs the script automatically
 index.html, assets/       the site itself
 ```

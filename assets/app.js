@@ -233,6 +233,12 @@
       label.textContent = node.title;
 
       row.append(caret, tab, label);
+      if (node.debug) {
+        const badge = document.createElement('span');
+        badge.className = 'debug-badge';
+        badge.textContent = 'DEBUG';
+        row.appendChild(badge);
+      }
       row.addEventListener('click', () => {
         if (window.Sound) Sound.click();
         // clicking a category you're already viewing just opens/closes it
@@ -323,6 +329,7 @@
     readerEl.innerHTML = `
       <article class="doc-page enter-right">
         <div class="doc-stamp">${stamp}</div>
+        ${node.debug ? `<div class="debug-badge debug-badge-floating">DEBUG</div>` : ''}
         <div class="doc-meta">${escapeHtml(node.path || 'root')}</div>
         ${headerHtml}
         <div class="doc-divider"></div>
@@ -441,6 +448,7 @@
         <div class="mail-switcher-item${acc.id === activeAccountId ? ' active' : ''}" data-account="${escapeAttr(acc.id)}">
           ${avatarHtml}
           <span class="mail-switcher-name">${escapeHtml(acc.name)}</span>
+          ${acc.debug ? `<span class="debug-badge">DEBUG</span>` : ''}
         </div>`;
     }).join('');
     mailSwitcherEl.querySelectorAll('.mail-switcher-item').forEach((el) => {
@@ -495,7 +503,7 @@
       return `
         <div class="mail-item${unread ? ' unread' : ''}${active ? ' active' : ''}" data-msg="${escapeAttr(m.id)}">
           <div class="mail-item-row">
-            <span class="mail-item-subject"><span class="mail-item-dot"></span>${escapeHtml(m.subject)}</span>
+            <span class="mail-item-subject"><span class="mail-item-dot"></span>${escapeHtml(m.subject)}${m.debug ? ` <span class="debug-badge">DEBUG</span>` : ''}</span>
             ${m.date ? `<span class="mail-item-date">${escapeHtml(formatMailDate(m.date))}</span>` : ''}
           </div>
           ${m.preview ? `<div class="mail-item-preview">${escapeHtml(m.preview)}</div>` : ''}
@@ -539,6 +547,7 @@
     readerEl.innerHTML = `
       <article class="doc-page enter-right">
         <button class="mail-return" type="button">‹ Назад к списку</button>
+        ${message.debug ? `<div class="debug-badge debug-badge-floating">DEBUG</div>` : ''}
         <div class="doc-meta">${escapeHtml(account.email || account.name)}</div>
         <h1 class="doc-title">${escapeHtml(message.subject)}</h1>
         <div class="mail-from">
