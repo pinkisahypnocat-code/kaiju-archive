@@ -131,6 +131,29 @@
               "children": []
             }
           ]
+        },
+        {
+          "name": "security",
+          "title": "Охранники",
+          "path": "workers/security",
+          "hasContent": true,
+          "html": "<p><em>(пусто)</em></p>",
+          "tagline": null,
+          "image": null,
+          "debug": false,
+          "children": [
+            {
+              "name": "SN Drom",
+              "title": "SN Drom",
+              "path": "workers/security/SN Drom",
+              "hasContent": true,
+              "html": "<p>Должность: Охранник</p><p>Характер: Спокойный, любит пошутить, часто слушает музыку на посте</p><p>Какая-то другая инфа:<br>• Обожает апельсиновый сок<br>• Носит на спине рюкзак с странной табличкой</p>",
+              "tagline": "Местоимение: Он/Его (синдром бля)",
+              "image": "content/workers/security/SN Drom/cover.jpg",
+              "debug": false,
+              "children": []
+            }
+          ]
         }
       ]
     }
